@@ -1,131 +1,183 @@
-﻿using Spectre.Console;
+﻿using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
+using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle8 : PuzzleBase
 {
-    
-    private string _instructions = string.Empty;
-    private Dictionary<string, (string L, string R)> _rules = new();
-    
-    private void LoadFile(string content)
+
+    private Matrix<float> _field;
+    private Matrix<float> _antiNodes;
+    private void LoadField()
     {
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        bool first = true;
-        
-        foreach (var line in lines)
+        _field = ReadMatrixChar("Data//puzzle8.txt", c =>
         {
-            AnsiConsole.WriteLine("Line: " + line);
-            if(first)
-            {
-                _instructions = line;
-                first = false;
-                continue;
-            }
-
-            var from = line.Substring(0, 3);
-            var toLeft = line.Substring(7, 3);
-            var toRight = line.Substring(12, 3);
+            if (c == '.') return -999;
+            return c;
+        });
         
-            _rules.Add(from, (toLeft, toRight));
-            
-        }
+        _antiNodes = Matrix.Build.Sparse(_field.RowCount, _field.ColumnCount, 0);
     }
-
-    private int NavigatePart1(string start = "AAA", string endsWith = "ZZZ")
-    {
-        string currPos = start;
-        int instrPos = 0;
-        int steps = 0;
-        while (!currPos.EndsWith(endsWith))
-        {
-            var rule = _rules[currPos];
-            if (_instructions[instrPos] == 'L')
-            {
-                currPos = rule.L;
-            }
-            else if (_instructions[instrPos] == 'R')
-            {
-                currPos = rule.R;
-            }
-
-            steps++;
-            instrPos++;
-            if(instrPos == _instructions.Length)
-                instrPos = 0;
-        }
-
-        return steps;
-    }
-    
     
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 8 part 1");
         AnsiConsole.WriteLine("Reading file");
-        var contents = ReadFullFile("Data//puzzle8.txt");
-        LoadFile(contents);
+        LoadField();
         AnsiConsole.WriteLine("File read");
+
+        for (int r = 0; r < _field.RowCount; r++)
+        {
+            for (int c = 0; c < _field.ColumnCount; c++)
+            {
+                FindAntiNodesPart1(r, c);
+            }
+        }
+
+        PrintMatrix(_antiNodes);
         
-        AnsiConsole.WriteLine($"Number of steps: {NavigatePart1()}"); 
+        int totalAntinodes = 0;
+        
+        foreach (var node in _antiNodes.Enumerate())
+        {
+            if (node > 0) totalAntinodes++;
+        }
+        
+        AnsiConsole.WriteLine($"Total antinodes = {totalAntinodes}");
+    }
+
+    private void FindAntiNodesPart1(int r0, int c0)
+    {
+        for (int r = 0; r < _field.RowCount; r++)
+        {
+            for (int c = 0; c < _field.ColumnCount; c++)
+            {
+                
+                if(r == r0 && c == c0) continue;
+                if((int)_field[r, c] != (int)_field[r0, c0]) continue;
+                if((int)_field[r, c] == -999 ||  (int)_field[r0, c0] == -999) continue;
+
+                int verticDelta = Math.Abs(r0 - r);
+                int horizDelta = Math.Abs(c0 - c);
+
+                if (r < r0)
+                {
+                    if (c < c0)
+                    {
+                        MarkAntiNode(r - verticDelta, c - horizDelta);
+                        MarkAntiNode(r0 + verticDelta, c0 + horizDelta);
+                    }
+                    else
+                    {
+                        MarkAntiNode(r - verticDelta, c + horizDelta);
+                        MarkAntiNode(r0 + verticDelta, c0 - horizDelta);
+                    }
+                }
+                else
+                {
+                    if (c < c0)
+                    {
+                        MarkAntiNode(r + verticDelta, c - horizDelta);
+                        MarkAntiNode(r0 - verticDelta, c0 + horizDelta);
+                    }
+                    else
+                    {
+                        MarkAntiNode(r + verticDelta, c + horizDelta);
+                        MarkAntiNode(r0 - verticDelta, c0 - horizDelta);
+                    }
+                }
+            }
+        }  
+    }
+
+    private bool MarkAntiNode(int r, int c)
+    {
+        if (r < 0 || r >= _antiNodes.RowCount) return false;
+        if (c < 0 || c >= _antiNodes.ColumnCount) return false;
+
+        _antiNodes[r, c]++;
+        return true;
     }
 
     public override void Part2()
     {
         AnsiConsole.WriteLine("Puzzle 8 part 2");
         AnsiConsole.WriteLine("Reading file");
-        var contents = ReadFullFile("Data//puzzle8.txt");
-        LoadFile(contents);
+        LoadField();
         AnsiConsole.WriteLine("File read");
         
-        AnsiConsole.WriteLine($"Number of steps: {NavigatePart2()}");
-    }
-
-    private bool IsEndPos(List<string> positions)
-    {
-        return positions.All(x  => x.EndsWith("Z"));
-    }
-    
-    private long NavigatePart2()
-    {
-        List<string> startPos = _rules.Keys.Where(k => k.EndsWith("A")).ToList();
-        List<int> stepCounts = new List<int>();
-
-        foreach (var start in startPos)
+        for (int r = 0; r < _field.RowCount; r++)
         {
-            stepCounts.Add(NavigatePart1(start, "Z"));
+            for (int c = 0; c < _field.ColumnCount; c++)
+            {
+                FindAntiNodesPart2(r, c);
+            }
+        }
+
+        PrintMatrix(_antiNodes);
+        
+        int totalAntinodes = 0;
+        
+        foreach (var node in _antiNodes.Enumerate())
+        {
+            if (node > 0) totalAntinodes++;
         }
         
-        // calculate lease common multiplier of stepCounts
-        long lcm = LCM(stepCounts);
+        AnsiConsole.WriteLine($"Total antinodes = {totalAntinodes}");
+    }
 
-        return lcm;
+    private void FindAntiNodesPart2(int r0, int c0)
+    {
+        for (int r = 0; r < _field.RowCount; r++)
+        {
+            for (int c = 0; c < _field.ColumnCount; c++)
+            {
+                
+                if(r == r0 && c == c0) continue;
+                if((int)_field[r, c] != (int)_field[r0, c0]) continue;
+                if((int)_field[r, c] == -999 ||  (int)_field[r0, c0] == -999) continue;
+
+                int verticDelta = Math.Abs(r0 - r);
+                int horizDelta = Math.Abs(c0 - c);
+
+                if (r < r0)
+                {
+                    if (c < c0)
+                    {
+                        MarkAllAntiNodes(r, c, -verticDelta, -horizDelta);
+                        MarkAllAntiNodes(r0, c0, verticDelta, horizDelta);
+                    }
+                    else
+                    {
+                        MarkAllAntiNodes(r, c, -verticDelta, horizDelta);
+                        MarkAllAntiNodes(r0, c0, verticDelta, -horizDelta);
+                    }
+                }
+                else
+                {
+                    if (c < c0)
+                    {
+                        MarkAllAntiNodes(r, c, verticDelta, -horizDelta);
+                        MarkAllAntiNodes(r0, c0, -verticDelta, +horizDelta);
+                    }
+                    else
+                    {
+                        MarkAllAntiNodes(r,c , verticDelta, horizDelta);
+                        MarkAllAntiNodes(r0, c0, -verticDelta, -horizDelta);
+                    }
+                }
+            }
+        }  
+    }
+
+    private void MarkAllAntiNodes(int r0, int c0, int verticDelta, int horizDelta)
+    {
+        while (MarkAntiNode(r0, c0))
+        {
+            r0 += verticDelta;
+            c0 += horizDelta;
+        }
     }
     
-    public long GCD(long a, long b)
-    {
-        while (b != 0)
-        {
-            long temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
-    }
-
-    public long LCM(long a, long b)
-    {
-        return (a / GCD(a, b)) * b;
-    }
-
-    public long LCM(List<int> numbers)
-    {
-        long lcm = numbers[0];
-        for (int i = 1; i < numbers.Count; i++)
-        {
-            lcm = LCM(lcm, numbers[i]);
-        }
-        return lcm;
-    }
 }

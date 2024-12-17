@@ -1,6 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using AOC2023;
+using AOC2024;
 using Spectre.Console.Cli;
 
 var app = new CommandApp();

@@ -1,65 +1,124 @@
-﻿using AOC2023.Models;
+﻿using MathNet.Numerics.LinearAlgebra;
 using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle4 : PuzzleBase
 {
-    private List<int> cardPoints = new();
-    private void ProcessCard(string line)
+    
+    private int x = 'X';
+    private int m = 'M';
+    private int a = 'A';
+    private int s = 'S';
+    
+    private float HandleChar(char c)
     {
-        AnsiConsole.Console.WriteLine("Processing card " + line);
-        string[] parts = line.Substring(10).Split('|');
-        List<int> cardNumbers = new List<int>(parts[0].Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList().Select(x => Int32.Parse(x)));
-        List<int> drawNumbers = new List<int>(parts[1].Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList().Select(x => Int32.Parse(x)));
-        List<int> result = drawNumbers.FindAll(x => cardNumbers.Contains(x));
-        
-        cardPoints.Add((int)Math.Pow(2, result.Count - 1));
-
+        return (int)c;
     }
+    
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 4 part 1");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle4.txt", ProcessCard);
+        Matrix<float> table = ReadMatrixChar("Data//puzzle4.txt", handleChar: HandleChar);
         AnsiConsole.WriteLine("File read");
-        AnsiConsole.WriteLine("Sum is " + cardPoints.Sum());
+        
+        //PrintMatrix(table);
+
+        int count = 0;
+
+        foreach (var element in table.EnumerateIndexed())
+        {
+            if ((int)element.Item3 == x)
+            {
+                AnsiConsole.WriteLine($"Checking position {element.Item2}, {element.Item1}");
+                count += CheckPositionPart1(element.Item2, element.Item1, table);
+            }
+        }
+        
+        AnsiConsole.WriteLine($"Number of xmas: {count}");
+    }
+
+    private int CheckPositionPart1(int x, int y, Matrix<float> table)
+    {
+
+        int count = 0;
+
+        if (IsValue(x - 1, y, m, table) && IsValue(x - 2, y, a, table) && IsValue(x - 3, y, s, table))
+            count++;
+        
+        if (IsValue(x - 1, y - 1, m, table) && IsValue(x - 2, y - 2, a, table) && IsValue(x - 3, y - 3, s, table))
+            count++;
+
+        if (IsValue(x, y - 1, m, table) && IsValue(x, y - 2, a, table) && IsValue(x, y - 3, s, table))
+            count++;
+
+        if (IsValue(x + 1, y - 1, m, table) && IsValue(x + 2, y - 2, a, table) && IsValue(x + 3, y - 3, s, table))
+            count++;
+        
+        if (IsValue(x + 1, y, m, table) && IsValue(x + 2, y, a, table) && IsValue(x + 3, y, s, table))
+            count++;
+        
+        if (IsValue(x + 1, y + 1, m, table) && IsValue(x + 2, y + 2, a, table) && IsValue(x + 3, y + 3, s, table))
+            count++;
+        
+        if (IsValue(x, y + 1, m, table) && IsValue(x, y + 2, a, table) && IsValue(x, y + 3, s, table))
+            count++;
+        
+        if (IsValue(x - 1, y + 1, m, table) && IsValue(x - 2, y + 2, a, table) && IsValue(x - 3, y + 3, s, table))
+            count++;
+        
+        return count;
+    }
+
+    private bool IsValue(int x, int y, float value, Matrix<float> table)
+    {
+        if (x >= 0 && x < table.ColumnCount)
+        {
+            if (y >= 0 && y < table.RowCount)
+            {
+                return (int)table[y, x] == (int)value;
+            }
+        }
+
+        return false;
     }
 
     public override void Part2()
     {
-        AnsiConsole.WriteLine("Puzzle 4 part 2");
+        AnsiConsole.WriteLine("Puzzle 4 part 1");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle4.txt", ProcessCardPart2);
+        Matrix<float> table = ReadMatrixChar("Data//puzzle4.txt", handleChar: HandleChar);
         AnsiConsole.WriteLine("File read");
-        CountCopies();
-        AnsiConsole.WriteLine("Total scratch cards: " + scratchCards.Sum(x => x.Value.Copies));
-    }
-    
-    private Dictionary<int, ScratchCard> scratchCards = new();
+        
+        //PrintMatrix(table);
 
-    private void CountCopies()
-    {
-        foreach(var cardNumber in scratchCards.Keys.OrderBy(x => x))
+        int count = 0;
+
+        foreach (var element in table.EnumerateIndexed())
         {
-            var card = scratchCards[cardNumber];
-            List<int> result = card.DrawNumbers.FindAll(x => card.CardNumbers.Contains(x));
-            int count = result.Count;
-            for (int j = cardNumber + 1; j < cardNumber + count + 1; j++)
+            if ((int)element.Item3 == a)
             {
-                scratchCards[j].Copies += card.Copies;
+                AnsiConsole.WriteLine($"Checking position {element.Item2}, {element.Item1}");
+                count += CheckPositionPart2(element.Item2, element.Item1, table);
             }
-            AnsiConsole.WriteLine("Card " + cardNumber + " has " + card.Copies + " copies");
         }
+        
+        AnsiConsole.WriteLine($"Number of x-mas: {count}");
     }
-    
-    private void ProcessCardPart2(string line)
+
+    private int CheckPositionPart2(int x, int y, Matrix<float> table)
     {
-        AnsiConsole.Console.WriteLine("Processing card " + line);
-        int CardId = Int32.Parse(line.Substring(5, 3).Trim());
-        string[] parts = line.Substring(10).Split('|');
-        List<int> cardNumbers = new List<int>(parts[0].Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList().Select(x => Int32.Parse(x)));
-        List<int> drawNumbers = new List<int>(parts[1].Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList().Select(x => Int32.Parse(x)));
-        scratchCards[CardId] = new ScratchCard(CardId, drawNumbers, cardNumbers);
+        if (IsValue(x - 1, y - 1, m, table) && IsValue(x + 1, y + 1, s, table) ||
+            IsValue(x + 1, y + 1, m, table) && IsValue(x - 1, y - 1, s, table))
+        {
+            if (IsValue(x + 1, y - 1, m, table) && IsValue(x - 1, y + 1, s, table) ||
+                IsValue(x - 1, y + 1, m, table) && IsValue(x + 1, y - 1, s, table))
+            {
+                return 1;
+            }
+        }
+
+        return 0;
     }
 }

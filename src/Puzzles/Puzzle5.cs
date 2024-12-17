@@ -1,202 +1,137 @@
-﻿using System.Xml.XPath;
-using AOC2023.Models;
-using Spectre.Console;
+﻿using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle5 : PuzzleBase
 {
 
-    private List<long> seedsToTest = new List<long>();
-    
-    private List<SeedMapping> seedToSoil = new List<SeedMapping>();
-    private List<SeedMapping> soilToFert = new List<SeedMapping>();
-    private List<SeedMapping> fertToWater = new List<SeedMapping>();
-    private List<SeedMapping> waterToLight = new List<SeedMapping>();
-    private List<SeedMapping> lightToTemp = new List<SeedMapping>();
-    private List<SeedMapping> tempToHumid = new List<SeedMapping>();
-    private List<SeedMapping> humidToLoc = new List<SeedMapping>();
-    private List<SeedMapping> compressed = new List<SeedMapping>();
-    
-    
-    
-    private void ProcessFile(string content)
+
+    private Dictionary<string, List<string>> pageOrderMap = new Dictionary<string, List<string>>();
+    private List<string[]> printInstructions = new List<string[]>();
+    private void ReadInput()
     {
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        int part = 1;
         
-        List<SeedMapping>? currentList = null;
-        
-        foreach (var line in lines)
+        ReadFileLineByLine("Data//puzzle5.txt", line =>
         {
-            AnsiConsole.WriteLine("Line: " + line);
-            if (line.StartsWith("seeds:"))
+            if (part == 1)
             {
-                seedsToTest.AddRange(line.Substring(7).Split(' ').ToList().Select(x => Int64.Parse(x)));
-            }
-            else if (line.StartsWith("seed-to-soil map:"))
-            {
-                currentList = seedToSoil;
-            }
-            else if (line.StartsWith("soil-to-fertilizer map:"))
-            {
-                currentList = soilToFert;
-            }
-            else if (line.StartsWith("fertilizer-to-water map:"))
-            {
-                currentList = fertToWater;
-            }
-            else if (line.StartsWith("water-to-light map:"))
-            {
-                currentList = waterToLight;
-            }
-            else if (line.StartsWith("light-to-temperature map:"))
-            {
-                currentList = lightToTemp;
-            }
-            else if (line.StartsWith("temperature-to-humidity map:"))
-            {
-                currentList = tempToHumid;
-            }
-            else if (line.StartsWith("humidity-to-location map:"))
-            {
-                currentList = humidToLoc;
+                if (line.Trim() == "") part++;
+                else
+                {
+                    string[] parts = line.Trim().Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+                    if (!pageOrderMap.ContainsKey(parts[0]))
+                    {
+                        pageOrderMap[parts[0]] = new List<string>();
+                    }
+                    
+                    pageOrderMap[parts[0]].Add(parts[1]);
+                }
             }
             else
             {
-                long[] parts = line.Split(' ').Select(x => Int64.Parse(x)).ToArray();
-                currentList?.Add(new SeedMapping(parts[1], parts[0], parts[2]));
+                printInstructions.Add(line.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
             }
-        }
-        
-        seedToSoil = seedToSoil.OrderBy(x => x.SourceStart).ToList();
-        soilToFert = soilToFert.OrderBy(x => x.SourceStart).ToList();
-        fertToWater = fertToWater.OrderBy(x => x.SourceStart).ToList();
-        waterToLight = waterToLight.OrderBy(x => x.SourceStart).ToList();
-        lightToTemp = lightToTemp.OrderBy(x => x.SourceStart).ToList();
-        tempToHumid = tempToHumid.OrderBy(x => x.SourceStart).ToList();
-        humidToLoc = humidToLoc.OrderBy(x => x.SourceStart).ToList();
-        
+        });
     }
-
-    private long TestSeed(long seed, List<SeedMapping> mappings)
-    {
-        //AnsiConsole.WriteLine("Searching seed " + seed + " for mapping");
-        // foreach(var mapping in mappings)
-        // {
-        //     var result = mapping.MapValue(seed);
-        //     if (result != Int64.MaxValue)
-        //     {
-        //         //AnsiConsole.WriteLine($"Mapping found ({mapping.SourceStart} - {mapping.DestinationStart} - {mapping.Range}), so returning " + result);
-        //         return result;
-        //     }
-        //         
-        // }
-        
-        var mapping = mappings.FirstOrDefault(x => x.SourceStart <= seed && x.SourceEnd >= seed);
-        if(mapping != null)
-        {
-            //AnsiConsole.WriteLine($"Mapping found ({mapping.SourceStart} - {mapping.DestinationStart} - {mapping.Range}), so returning " + mapping.MapValue(seed));
-            return mapping.MapValue(seed);
-        }
-        //AnsiConsole.WriteLine("Mapping not found, so returning seed " + seed);
-
-        return seed;
-
-    }
-    
-    private void SearchLowestLocation()
-    {
-        long lowest = Int64.MaxValue;
-        
-        foreach (var seed in seedsToTest)
-        {
-            //AnsiConsole.WriteLine("Testing seed " + seed + " for lowest location");
-            var result = TestSeed(seed, seedToSoil);
-            result = TestSeed(result, soilToFert);
-            result = TestSeed(result, fertToWater);
-            result = TestSeed(result, waterToLight);
-            result = TestSeed(result, lightToTemp);
-            result = TestSeed(result, tempToHumid);
-            result = TestSeed(result, humidToLoc);
-            if(result<lowest)
-                lowest = result;
-        }
-        
-        AnsiConsole.WriteLine("Lowest location is " + lowest);
-    }
-    
-    
     
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 5 part 1");
         AnsiConsole.WriteLine("Reading file");
-        var content = ReadFullFile("Data//puzzle5.txt");
+        ReadInput();
         AnsiConsole.WriteLine("File read");
-        ProcessFile(content);
-        SearchLowestLocation();
+
+        int sum = 0;
         
+        foreach (var pages in printInstructions)
+        {
+            if (IsCorrectlyOrdered(pages))
+            {
+                AnsiConsole.WriteLine(String.Join(',', pages));
+                string middle = pages[(int)Math.Floor(pages.Length / 2.0)];
+                sum += int.Parse(middle);
+            }
+        }
+        
+        AnsiConsole.WriteLine($"Total = {sum}");
+        
+    }
+
+    private bool IsCorrectlyOrdered(string[] pages)
+    {
+
+        for (int j = 1; j < pages.Length; j++)
+        {
+            
+            if(!pageOrderMap.ContainsKey(pages[j])) continue;
+            
+            for (int i = j - 1; i >= 0; i--)
+            {
+                if (pageOrderMap[pages[j]].Contains(pages[i]))
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     public override void Part2()
     {
         AnsiConsole.WriteLine("Puzzle 5 part 1");
         AnsiConsole.WriteLine("Reading file");
-        var content = ReadFullFile("Data//puzzle5.txt");
+        ReadInput();
         AnsiConsole.WriteLine("File read");
-        ProcessFile(content);
-        SearchLowestLocationPart2();
+
+        int sum = 0;
+        
+        foreach (var pages in printInstructions)
+        {
+            if (!IsCorrectlyOrdered(pages))
+            {
+                AnsiConsole.Write(String.Join(',', pages) + " becomes ");
+
+                string[] sorted = SortPages(pages);
+                
+                
+                AnsiConsole.WriteLine(String.Join(',', sorted));
+                string middle = sorted[(int)Math.Floor(sorted.Length / 2.0)];
+                sum += int.Parse(middle);
+            }
+        }
+        
+        AnsiConsole.WriteLine($"Total = {sum}");
     }
-    
-    private void SearchLowestLocationPart2()
+
+    private string[] SortPages(string[] pages)
     {
-        long lowest = Int64.MaxValue;
 
-        List<SeedRange> ranges = new List<SeedRange>();
+        List<string> result = new List<string>();
 
-        for (var index = 0; index < seedsToTest.Count; index += 2)
-        {
-            
-            var seedStart = seedsToTest[index];
-            var seedEnd = seedsToTest[index + 1];
-            
-            ranges.Add(new SeedRange(seedStart, seedStart + seedEnd - 1));
-        }
+        result.Add(pages[pages.Length - 1]);
         
-        List<List<SeedMapping>> lists = new List<List<SeedMapping>>()
+        for (int j = pages.Length - 2; j >= 0; j--)
         {
-           seedToSoil, soilToFert, fertToWater, waterToLight, lightToTemp, tempToHumid, humidToLoc
-        };
-        
-        foreach (var list in lists)
-        {
-            List<SeedRange> newRanges = new List<SeedRange>();
-            foreach (var range in ranges)
+
+            bool inserted = false;
+            for (int i = result.Count - 1; i >= 0; i--)
             {
-                range.Mapped = false;
-            }
-            foreach (var mapping in list)
-            {
-                foreach (var range in ranges)
+                if (pageOrderMap.ContainsKey(result[i]) && pageOrderMap[result[i]].Contains(pages[j]))
                 {
-                    if (range.Mapped)
-                    {
-                        newRanges.Add(range);
-                        continue;
-                    }
-                       
-                    var result = mapping.Map(range);
-                    newRanges.AddRange(result);
+                    result.Insert(i + 1, pages[j]);
+                    inserted = true;
+                    break;
                 }
+            }
 
-                ranges = new List<SeedRange>(newRanges);
-                newRanges.Clear();
+            if (!inserted)
+            {
+                result.Insert(0, pages[j]);
             }
         }
-        
-        var sortedresult = ranges.OrderBy(x => x.Start).ToList();
-        
-        AnsiConsole.WriteLine("Lowest location is " + sortedresult[0].Start);
-        
+
+        return result.ToArray();
     }
 }

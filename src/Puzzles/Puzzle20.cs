@@ -1,6 +1,6 @@
 ﻿using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 
 enum ModuleType

@@ -1,7 +1,7 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle3 : PuzzleBase
 {
@@ -28,7 +28,7 @@ public class Puzzle3 : PuzzleBase
     {
         AnsiConsole.WriteLine("Puzzle 3 part 1");
         AnsiConsole.WriteLine("Reading file");
-        Matrix<float> m = ReadMatrixChar("Data//puzzle3.txt", handleChar: HandleChar);
+        Matrix<float> m = ReadMatrixChar("Data//puzzle4.txt", handleChar: HandleChar);
         AnsiConsole.WriteLine("File read");
         
         int currentNumber = 0;

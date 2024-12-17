@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle2 : PuzzleBase
 {

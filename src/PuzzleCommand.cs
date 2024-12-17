@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
-using AOC2023.Puzzles;
+using AOC2024.Puzzles;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace AOC2023;
+namespace AOC2024;
 
 public class PuzzleCommandSettings : CommandSettings
 {
@@ -28,7 +28,7 @@ public class PuzzleCommand : Command<PuzzleCommandSettings>
             settings.Part = AnsiConsole.Ask<int>("Which part do you want to run?");
         }
         
-        Type? t = Type.GetType("AOC2023.Puzzles.Puzzle" + settings.PuzzleNumber);
+        Type? t = Type.GetType("AOC2024.Puzzles.Puzzle" + settings.PuzzleNumber);
         if (t == null)
         {
             AnsiConsole.WriteLine("[red]Puzzle not found[/]");

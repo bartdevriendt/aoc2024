@@ -1,115 +1,85 @@
-﻿using Spectre.Console;
+﻿using AOC2024.Models;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
+using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle12 : PuzzleBase
 {
-    private int totalCombinations = 0;
-    private void TestResults(string current, int[] groups)
+    private Matrix<float> _land;
+    private List<(int, int)> _visited = new List<(int, int)>();
+    private List<LandBlock> _blocks = new List<LandBlock>();
+    private void ReadInput()
     {
-        //AnsiConsole.WriteLine("Testing string " + current);
-        string[] parts = current.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if(parts.Length != groups.Length)
-            return;
-        int j = 0;
-        while(j < groups.Length && j < parts.Length && parts[j].Length == groups[j])
-        {
-            j++;
-        }
+        _land = ReadMatrixChar("Data//puzzle12.txt", c => c);
 
-        if (j == groups.Length && j == parts.Length)
-        {
-            AnsiConsole.WriteLine("Match found: " + current);
-            totalCombinations++;
-        }
-            
-    }
-
-    private bool CheckIntermediateResult(string current, int[] groups)
-    {
-        string[] parts = current.Split(".?".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-        int j = 0;
-        while (j < parts.Length && j < groups.Length)
-        {
-            if(parts[j].Length != groups[j])
-                return false;
-            j++;
-        }
-
-        return true;
-    }
-    
-    private void BuildTestStrings(string current, string pattern, int index, int[] groups)
-    {
-        if(current.Length == pattern.Length)
-        {
-            TestResults(current, groups);
-            return;
-        }
+        _land = _land.InsertColumn(0, new SparseVector(_land.RowCount));
+        _land = _land.InsertColumn(_land.ColumnCount, new SparseVector(_land.RowCount));
+        _land = _land.InsertRow(0, new SparseVector(_land.ColumnCount));
+        _land = _land.InsertRow(_land.RowCount, new SparseVector(_land.ColumnCount));
         
-        while(index < pattern.Length && (pattern[index] == '.' || pattern[index] == '#'))
-        {
+        PrintMatrix(_land);
 
-            current += pattern[index];
-            if (pattern[index] == '.')
+    }
+
+
+    private void WalkBlock(LandBlock block, int r, int c, int val)
+    {
+        if ((int)_land[r, c] == val && !_visited.Contains((r, c)))
+        {
+            Plot plot = new Plot();
+            plot.C = c;
+            plot.R = r;
+            plot.BottomFence = (int)_land[r + 1, c] != val;
+            plot.TopFence = (int)_land[r - 1, c] != val;
+            plot.LeftFence = (int)_land[r, c - 1] != val;
+            plot.RightFence = (int)_land[r, c + 1] != val;
+            block.Plots.Add(plot);
+            _visited.Add((r, c));
+            
+            WalkBlock(block, r - 1, c, val);
+            WalkBlock(block, r + 1, c, val);
+            WalkBlock(block, r, c - 1, val);
+            WalkBlock(block, r, c + 1, val);
+        }
+    }
+
+    private void FindBlocks()
+    {
+        for (int r = 1; r < _land.RowCount - 1; r++)
+        {
+            for (int c = 1; c < _land.ColumnCount - 1; c++)
             {
-                if (CheckIntermediateResult(current, groups))
+                if (!_visited.Contains((r, c)))
                 {
-                    return;
+                    LandBlock block = new LandBlock();
+                    WalkBlock(block, r, c, (int)_land[r, c]);
+                    _blocks.Add(block);
                 }
             }
-            index++;
         }
-        
-        if(index == pattern.Length)
-        {
-            TestResults(current, groups);
-            return;
-        }
-
-        BuildTestStrings(current + '#', pattern, index + 1, groups);
-        BuildTestStrings(current + '.', pattern, index + 1, groups);
-    }
-    
-    private void ProcessLine(string line)
-    {
-        string[] parts = line.Split(' ');
-        string pattern = parts[0];
-        int[] groups = parts[1].Split(',').Select(int.Parse).ToArray();
-        AnsiConsole.WriteLine(line);
-        BuildTestStrings("", pattern, 0, groups);
-    }
-    
-    private void ProcessLinePart2(string line)
-    {
-        string[] parts = line.Split(' ');
-        string pattern = parts[0];
-        int[] groups = parts[1].Split(',').Select(int.Parse).ToArray();
-        List<int> inter = new();
-        inter.AddRange(groups);
-        inter.AddRange(groups);
-        inter.AddRange(groups);
-        inter.AddRange(groups);
-        inter.AddRange(groups);
-        AnsiConsole.WriteLine(line);
-        BuildTestStrings("", pattern + "?" + pattern + "?" + pattern + "?" + pattern + "?" + pattern, 0, inter.ToArray());
     }
     
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 12 part 1");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle12.txt", ProcessLine);
+        ReadInput();
         AnsiConsole.WriteLine("File read");
-        AnsiConsole.WriteLine("Total combinations: " + totalCombinations);
+        FindBlocks();
+        
+        AnsiConsole.WriteLine($"Total price: {_blocks.Select(b => b.Price()).Sum()} ");
     }
 
     public override void Part2()
     {
         AnsiConsole.WriteLine("Puzzle 12 part 2");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle12.txt", ProcessLinePart2);
+        ReadInput();
         AnsiConsole.WriteLine("File read");
-        AnsiConsole.WriteLine("Total combinations: " + totalCombinations);
+        FindBlocks();
+        
+        AnsiConsole.WriteLine($"Total price: {_blocks.Select(b => b.Edges() * b.Plots.Count).Sum()} ");
     }
 }

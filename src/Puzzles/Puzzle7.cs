@@ -1,77 +1,111 @@
-﻿using AOC2023.Models;
-using Spectre.Console;
+﻿using Spectre.Console;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public class Puzzle7 : PuzzleBase
 {
-    private List<Hand> hands = new List<Hand>();
-    private bool jIsJoker = false;
-    private void ProcessLine(string line)
+
+    private List<string> operations = new List<string>();
+
+    private void ReadInput()
     {
-        string[] parts = line.Split(' ');
-        hands.Add(new Hand(parts[0], int.Parse(parts[1]), jIsJoker));
+        ReadFileLineByLine("Data//puzzle7.txt", s => operations.Add(s));
     }
     
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 7 part 1");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle7.txt", ProcessLine);
+        ReadInput();
         AnsiConsole.WriteLine("File read");
 
-        try
-        {
-            hands.Sort(new HandComparator());
-        }
-        catch (Exception e)
-        {
-            AnsiConsole.WriteException(e);
-            throw;
-        }
+        long calibResult = 0;
         
-
-        int bidTotal = 0;
-        for (var index = 0; index < hands.Count; index++)
+        foreach (var line in operations)
         {
-            var hand = hands[index];
-            bidTotal += hand.Bid * (index + 1);
-        }
+            string[] parts = line.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            int combinations = CountCombinations(long.Parse(parts[0]), parts[1], new[] { "+", "*" });
+            if (combinations > 0)
+            {
+                calibResult += long.Parse(parts[0]);
+            }
+        } 
         
-        AnsiConsole.WriteLine("Bid total is " + bidTotal);
+        AnsiConsole.WriteLine($"Total calib result = {calibResult}");
+        
     }
+
+    private int CountCombinations(long resultValue, string expression, string[] operators)
+    {
+        int totalCombinations = 0;
+
+        int[] numbers =
+            expression.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(s => Int32.Parse(s)).ToArray();
+
+        int left = numbers[0];
+        
+        foreach(var op in operators)
+        {
+            totalCombinations += DoOperation(resultValue, left, numbers, 1, op, operators);
+        }
+
+        return totalCombinations;
+    }
+
+    private int DoOperation(long resultValue, long left, int[] numbers, int index, string operation, string[] operators)
+    {
+        long result = left;
+
+        if (operation == "*")
+        {
+            result *= numbers[index];
+        }
+        else if (operation == "+")
+        {
+            result += numbers[index];
+        }
+        else if (operation == "||")
+        {
+            string lefthand = left.ToString();
+            string rightHand = numbers[index].ToString();
+            result = long.Parse(lefthand + rightHand);
+        }
+
+        index++;
+        if (index == numbers.Length)
+        {
+            return resultValue == result ? 1 : 0;
+        }
+
+        int returnValue = 0;
+        foreach(var op in operators)
+        {
+            returnValue += DoOperation(resultValue, result, numbers, index, op, operators);
+        }
+
+        return returnValue;
+    } 
+    
 
     public override void Part2()
     {
-        jIsJoker = true;
-        AnsiConsole.WriteLine("Puzzle 7 part 2");
+        AnsiConsole.WriteLine("Puzzle 7 part 1");
         AnsiConsole.WriteLine("Reading file");
-        ReadFileLineByLine("Data//puzzle7.txt", ProcessLine);
+        ReadInput();
         AnsiConsole.WriteLine("File read");
 
-        foreach (var hand in hands)
-        {
-            AnsiConsole.WriteLine(hand.ToString());
-        }
-
-        try
-        {
-            hands.Sort(new HandComparator());
-        }
-        catch (Exception e)
-        {
-            AnsiConsole.WriteException(e);
-            throw;
-        }
+        long calibResult = 0;
         
-
-        int bidTotal = 0;
-        for (var index = 0; index < hands.Count; index++)
+        foreach (var line in operations)
         {
-            var hand = hands[index];
-            bidTotal += hand.Bid * (index + 1);
-        }
+            string[] parts = line.Split(':', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            int combinations = CountCombinations(long.Parse(parts[0]), parts[1], new[] { "+", "*","||" });
+            if (combinations > 0)
+            {
+                calibResult += long.Parse(parts[0]);
+            }
+        } 
         
-        AnsiConsole.WriteLine("Bid total is " + bidTotal);
+        AnsiConsole.WriteLine($"Total calib result = {calibResult}");
     }
 }

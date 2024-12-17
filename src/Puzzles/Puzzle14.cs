@@ -1,178 +1,140 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using System.Drawing;
+using System.Drawing.Imaging;
+using AOC2024.Models;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Single;
 using Spectre.Console;
+using Color = System.Drawing.Color;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
-public enum Direction
-{
-    North = 1,
-    West = 2,
-    South = 3,
-    East = 4
-}
 
 public class Puzzle14 : PuzzleBase
 {
-    private Matrix<float> platform;
-    private float HandleChar(char c)
-    {
-        return c switch 
-        {
-            '.' => 0,
-            '#' => 1,
-            'O' => 2,
-            _ => 999
-        };
-    }
 
-    private void TiltPlatform(Direction d)
-    {
-        int x = 0;
-        int y = 0;
-        int rStart = 0;
-        int rEnd = 0;
-        int cStart = 0;
-        int cEnd = 0;
-        int rIncr = 1;
-        int cIncr = 1;
-        
-        switch (d)
-        {
-            case Direction.North:
-                y = -1;
-                x = 0;
-                cEnd = platform.ColumnCount;
-                rEnd = platform.RowCount;
-                break;
-            case Direction.West:
-                y = 0;
-                x = -1;
-                cEnd = platform.ColumnCount;
-                rEnd = platform.RowCount;
-                break;
-            case Direction.South:
-                y = 1;
-                x = 0;
-                rStart = platform.RowCount - 1;
-                rEnd = -1;
-                rIncr = -1;
-                cEnd = platform.ColumnCount;
-                break;
-            case Direction.East:
-                y = 0;
-                x = 1;
-                cStart = platform.ColumnCount - 1;
-                cEnd = -1;
-                cIncr = -1;
-                rEnd = platform.RowCount;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(d), d, null);
-        }
-
-        
-        
-        for(int r=rStart; r != rEnd; r+=rIncr)
-        {
-            for(int c=cStart; c != cEnd; c+=cIncr)
-            {
-                
-                int newR = r + y;
-                int newC = c + x;
-                if (newR < 0 || newR >= platform.RowCount || newC < 0 || newC >= platform.ColumnCount)
-                {
-                    continue;
-                }
-
-                if(platform[r, c] == 2f)
-                {
-
-                    int nextR = r;
-                    int nextC = c;
-                    while (platform[newR, newC] == 0)
-                    {
-                        //platform[newR - y, newC - x] = 0;
-                        //platform[newR, newC] = 2;
-                        nextR = newR;
-                        nextC = newC;
-                        newR += y;
-                        newC += x;
-                        if (newR < 0 || newR >= platform.RowCount || newC < 0 || newC >= platform.ColumnCount)
-                        {
-                            break;
-                        }
-                    }
-                    
-                    platform[r, c] = 0;
-                    platform[nextR, nextC] = 2;
-                }
-                
-            }
-        }
-        
-        
-        //AnsiConsole.WriteLine($"After tilting {d}:");
-        //PrintMatrix(platform);
-    }
-
-    private void CalculateLoad(Matrix<float> p)
-    {
-
-        int totalLoad = 0;
-        
-        for (int r = 0; r < p.RowCount; r++)
-        {
-            for (int c = 0; c < p.ColumnCount; c++)
-            {
-                if (p[r, c] == 2f)
-                    totalLoad += p.RowCount - r;
-
-            }
-        }
-        
-        AnsiConsole.WriteLine("Total load is " + totalLoad);
-
-    }
+    private List<Robot> _robots = new List<Robot>();
     
+    
+    private void ProcessLine(string line)
+    {
+        Robot r = new Robot();
+        string[] parts = line.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        string[] xy = parts[0][2..].Split(',');
+        string[] dxdy = parts[1][2..].Split(',');
+        r.X = int.Parse(xy[0]);
+        r.Y = int.Parse(xy[1]);
+        r.Dx = int.Parse(dxdy[0]);
+        r.Dy = int.Parse(dxdy[1]);
+        
+        _robots.Add(r);
+    }
+
+
     public override void Part2()
     {
         AnsiConsole.WriteLine("Puzzle 14 part 2");
         AnsiConsole.WriteLine("Reading file");
-        platform = ReadMatrixChar("Data//puzzle14.txt", handleChar: HandleChar);
+        ReadFileLineByLine("Data//puzzle14.txt", s => ProcessLine(s));
         AnsiConsole.WriteLine("File read");
 
+        int seconds = 1;
+
+        StreamWriter sw = new StreamWriter("Data//output14.txt");
         
-        var platformOrig = platform.Clone();
-        var flat = platformOrig.ToColumnMajorArray();
-        for (long i = 0; i < 1000000000; i++)
+        
+        while (seconds < 10000)
         {
-            TiltPlatform(Direction.North);
-            TiltPlatform(Direction.West);
-            TiltPlatform(Direction.South);
-            TiltPlatform(Direction.East);
-            ;
-            if (platform.Storage.Equals(platformOrig.Storage))
+            AnsiConsole.MarkupLine($"[green]Seconds: {seconds}[/]");
+            
+            
+            
+            
+            MoveRobots(101, 103, seconds);
+
+            Matrix<float> field = Matrix.Build.Sparse(103, 101);
+
+            foreach (var robot in _robots)
             {
-                AnsiConsole.WriteLine($"Platform is the same as original after {i} iterations");
-                break;
+                field[robot.EndY, robot.EndX] = 1;
             }
+
+            string output = "";
+            bool isCandidate = false;
+
+            for (int r = 0; r < field.RowCount; r++)
+            {
+                string line = "";
+                for (int c = 0; c < field.ColumnCount; c++)
+                {
+                    line += (field[r, c] > 0 ? "*" : " ");
+
+                }
+
+                if (line.IndexOf("**********") >= 0)
+                {
+                    isCandidate = true;
+                }
+
+                output += line + "\n";
+            }
+            
+
+            if (isCandidate)
+            {
+                sw.WriteLine($"Seconds: {seconds}");
+                sw.WriteLine(output);
+                sw.WriteLine();
+                sw.WriteLine();
+                sw.WriteLine();
+            }
+
+            seconds += 1;
+
         }
-
-        List<int> test = new List<int>();
-        test.Select((i, j) => (i, j));
-
-        //PrintMatrix(platform);
-        CalculateLoad(platform);
     }
 
+    private void MoveRobots(int fieldSizeX, int fieldSizeY, int seconds)
+    {
+        _robots.ForEach(r =>
+        {
+            r.EndX = r.X + r.Dx * seconds;
+            r.EndY = r.Y + r.Dy * seconds;
+
+            if (r.EndX < 0) r.EndX = r.EndX % -fieldSizeX + fieldSizeX;
+            if (r.EndY < 0) r.EndY = r.EndY % -fieldSizeY + fieldSizeY;
+
+            r.EndX = r.EndX % fieldSizeX;
+            r.EndY = r.EndY % fieldSizeY;
+
+            // while (r.X < 0) r.X = r.X + fieldSizeX;
+            // while (r.Y < 0) r.Y = r.Y + fieldSizeY;
+            //
+            // while(r.X >= fieldSizeX) r.X = r.X - fieldSizeX;
+            // while(r.Y >= fieldSizeY) r.Y = r.Y - fieldSizeY;
+            //
+
+        });
+    }
+    
     public override void Part1()
     {
         AnsiConsole.WriteLine("Puzzle 14 part 1");
         AnsiConsole.WriteLine("Reading file");
-        platform = ReadMatrixChar("Data//puzzle14.txt", handleChar: HandleChar);
+        ReadFileLineByLine("Data//puzzle14.txt", s => ProcessLine(s));
         AnsiConsole.WriteLine("File read");
-        TiltPlatform(Direction.North);
-        PrintMatrix(platform);
-        CalculateLoad(platform);
+
+        int seconds = 100;
+        int fieldSizeX = 101;
+        int fieldSizeY = 103;
+        
+        
+        MoveRobots(fieldSizeX, fieldSizeY, seconds);
+
+        int q1 = _robots.Where(r => r.EndX < fieldSizeX / 2 && r.EndY < fieldSizeY / 2).Count();
+        int q2 = _robots.Where(r => r.EndX > fieldSizeX / 2 && r.EndY < fieldSizeY / 2).Count();
+        int q3 = _robots.Where(r => r.EndX < fieldSizeX / 2 && r.EndY > fieldSizeY / 2).Count();
+        int q4 = _robots.Where(r => r.EndX > fieldSizeX / 2 && r.EndY > fieldSizeY / 2).Count();
+        
+        AnsiConsole.WriteLine($"Score: {q1 * q2 * q3 * q4}");
     }
 }

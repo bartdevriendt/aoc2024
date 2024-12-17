@@ -1,6 +1,6 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 
-namespace AOC2023.Puzzles;
+namespace AOC2024.Puzzles;
 
 public abstract class PuzzleBase
 {
@@ -64,7 +64,7 @@ public abstract class PuzzleBase
         return m;
     }
     
-    protected void PrintMatrix<T>(Matrix<T> matrix)
+    protected void PrintMatrix<T>(Matrix<T> matrix, string separator = " ")
         where T: struct, IFormattable, IEquatable<T>
     {
 
@@ -75,7 +75,29 @@ public abstract class PuzzleBase
         {
             for (int c = 0; c < matrix.ColumnCount; c++)
             {
-                Console.Write(matrix[r, c].ToString("G0", System.Globalization.CultureInfo.InvariantCulture) + " ");
+                Console.Write(matrix[r, c].ToString("G0", System.Globalization.CultureInfo.InvariantCulture) + separator);
+            }
+            Console.WriteLine("");
+        }
+            
+        //for (int x = 0; x < matrix.ColumnCount; x++)
+        //{
+
+        //}
+    }
+    
+    protected void PrintMatrix<T>(Matrix<T> matrix, Func<T, string> handleValue)
+        where T: struct, IFormattable, IEquatable<T>
+    {
+
+            
+        //Console.WriteLine(matrix);
+
+        for (int r = 0; r < matrix.RowCount; r++)
+        {
+            for (int c = 0; c < matrix.ColumnCount; c++)
+            {
+                Console.Write(handleValue(matrix[r, c]));
             }
             Console.WriteLine("");
         }
