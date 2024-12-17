@@ -1,4 +1,6 @@
-﻿using Spectre.Console;
+﻿using AOC2024.Models.Day17;
+using GeneticSharp;
+using Spectre.Console;
 
 namespace AOC2024.Puzzles;
 
@@ -157,36 +159,49 @@ public class Puzzle17 : PuzzleBase
         
         AnsiConsole.WriteLine("File read");
 
-
-        long regA = 401;
-        registerA = regA;
-        while (regA < 20000)
+        
+        var programChromosome = new ProgramChromosome(program.Length);
+        var programFitness = new ProgramFitness(program);
+        var crossover = new UniformCrossover();
+        var mutation = new UniformMutation(true);
+        var selection = new RouletteWheelSelection();
+        var population = new Population(5000, 5000, programChromosome);
+       
+        var ga = new GeneticAlgorithm(population, programFitness, selection, crossover, mutation);
+        ga.Termination = new GenerationNumberTermination(100);
+        ga.GenerationRan += (_, _) =>
         {
-            int[] result = ProcessProgram(false);
-            
-            AnsiConsole.WriteLine($"RegA: {regA}\t Registers: {registerA}, {registerB}, {registerC} \t\t Output: {string.Join(",", result)} \t Length: {result.Length}");
-            
-            // regA++;
-            // registerA = regA;
-            // registerB = 0;
-            // registerC = 0;
-            if (result.Length == 0 || result.Length != program.Length)
+            var chrome = (ProgramChromosome) ga.BestChromosome;
+        
+            AnsiConsole.WriteLine("Best solution found has {0} fitness.", chrome.Fitness);
+            AnsiConsole.WriteLine($"Register A: {chrome.RegisterValue()}");
+        };
+        ga.Start();
+
+        
+        
+        
+        ProgramChromosome best = (ProgramChromosome) ga.BestChromosome;
+
+        foreach (var chrome in ga.Population.CurrentGeneration.Chromosomes)
+        {
+            ProgramChromosome newChromosome = (ProgramChromosome) chrome;
+            if (newChromosome.Fitness == best.Fitness && newChromosome.RegisterValue() < best.RegisterValue())
             {
-                regA++;
-                registerA = regA;
-                registerB = 0;
-                registerC = 0;
-                if(regA % 1000000 == 0)
-                    AnsiConsole.WriteLine($"RegA: {regA}");
-            }
-            else
-            {
-                AnsiConsole.WriteLine($"Output: {string.Join(",", result)}");
-                break;
+                AnsiConsole.WriteLine("Selecting a better chromosome");
+                best = newChromosome;
             }
         }
         
-        AnsiConsole.WriteLine($"Register A: {regA}");
+        AnsiConsole.WriteLine("Best solution found has {0} fitness.", best.Fitness);
+        AnsiConsole.WriteLine($"Register A: {best.RegisterValue()}");
 
+        ActualProgram validate = new ActualProgram(program, best.RegisterValue(), 0, 0);
+        validate.RunProgram();
+        
+        AnsiConsole.WriteLine(string.Join(",", program));
+        AnsiConsole.WriteLine(string.Join(",", validate.Output));
     }
+    
+    
 }
